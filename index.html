@@ -6,13 +6,12 @@
   <title>Платёжки — поиск по ФИО</title>
   <style>
     :root{--bg:#0f172a;--card:#fff;--muted:#64748b;--primary:#2563eb}
-    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:#0b1223}
-    .wrap{min-height:100dvh;display:grid;place-items:start center;padding:24px}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:#0b1223;display:flex;flex-direction:column;min-height:100vh}
+    .wrap{flex:1;display:grid;place-items:start center;padding:24px}
     .app{width:min(900px,100%);display:grid;gap:16px}
-    header{position:relative;background:var(--card);border-radius:16px;padding:16px 20px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px}
+    header{background:var(--card);border-radius:16px;padding:16px 20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     h1{margin:0;font-size:24px;line-height:1.2}
     .lead{margin:2px 0 0;color:var(--muted);font-size:14px}
-    .logo{position:absolute;right:16px;top:50%;transform:translateY(-50%);height:44px;width:auto;border-radius:10px;object-fit:contain}
     .panel{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     label{font-weight:600}
     input{width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px}
@@ -24,24 +23,20 @@
     .item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin:8px 6px}
     .name{font-weight:700}
     .meta{color:#64748b;font-size:12px}
-    .dl{display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:#eef2ff;border:1px solid #c7d2fe;padding:8px 12px;border-radius:10px;font-weight:700}
+    .dl{display:inline-flex;align-items:center;text-decoration:none;background:#eef2ff;border:1px solid #c7d2fe;padding:8px 12px;border-radius:10px;font-weight:700}
     .dl:hover{background:#e0e7ff}
-    .dl img{height:18px;width:18px;object-fit:contain}
     .empty{color:#64748b;padding:8px}
     .error{color:#b91c1c;padding:8px}
-    @media (max-width: 560px){ .row{grid-template-columns:1fr} .logo{display:none} }
+    footer{padding:24px;text-align:center}
+    footer img{max-width:160px;width:100%;height:auto;opacity:0.9}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="app">
       <header>
-        <div>
-          <h1>Поиск платёжки по ФИО</h1>
-          <p class="lead">Введите полное или частичное ФИО. Буквы «ё/е» учитываются автоматически.</p>
-        </div>
-        <!-- ЛОГО: положи файл "New Logo.jpg" в корень репозитория -->
-        <img class="logo" src="./New Logo.jpg" alt="Логотип" />
+        <h1>Поиск платёжки по ФИО</h1>
+        <p class="lead">Введите полное или частичное ФИО. Буквы «ё/е» учитываются автоматически.</p>
       </header>
 
       <section class="panel">
@@ -57,8 +52,13 @@
     </div>
   </div>
 
+  <!-- Большой логотип внизу -->
+  <footer>
+    <!-- Положи файл memoji-girl.png в корень репозитория -->
+    <img src="./memoji-girl.png" alt="Логотип" />
+  </footer>
+
   <script>
-    // ВСТАВЬ СВОЙ /exec URL НИЖЕ (ОДНОЙ СТРОКОЙ, БЕЗ ЛИШНИХ ПРОБЕЛОВ):
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNgNp1fSs3dCLdk6pU2Bf-T_FcPKZLiZ1siL4qzrTqXkN48gT_XGDyjXGaMO2WnodK/exec";
 
     function norm(s){
@@ -69,7 +69,6 @@
         .trim();
     }
 
-    // JSONP-помощник (увеличен таймаут + анти-кэш)
     function jsonp(url){
       return new Promise((resolve, reject)=>{
         const cb = "cb_" + Math.random().toString(36).slice(2);
@@ -108,18 +107,14 @@
           return;
         }
 
-        // РЕНДЕР: только «Скачать»
+        // только кнопка «Скачать»
         out.innerHTML = data.items.map((it) => `
           <div class="item">
             <div>
               <div class="name">${it.name}</div>
               <div class="meta">${new Date(it.modifiedTime).toLocaleString('ru-RU')} • ${it.mimeType}</div>
             </div>
-            <a class="dl" href="${it.downloadLink}" target="_blank" rel="noopener">
-              <!-- Маленький милый логотип у ссылки «Скачать»: положи memoji-girl.png в корень репо -->
-              <img src="./memoji-girl.png" alt="" />
-              Скачать
-            </a>
+            <a class="dl" href="${it.downloadLink}" target="_blank" rel="noopener">Скачать</a>
           </div>
         `).join("");
 
