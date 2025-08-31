@@ -15,6 +15,7 @@
     input{width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px}
     input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px #93c5fd}
     button{cursor:pointer;border:none;border-radius:10px;padding:12px 16px;background:#2563eb;color:#fff;font-weight:700}
+    button[disabled]{opacity:.6;cursor:progress}
     .row{display:grid;grid-template-columns:1fr auto;gap:12px}
     .hint{color:#64748b;font-size:12px}
     .result{border:1px dashed #cbd5e1;border-radius:10px;padding:12px;background:#f8fafc}
@@ -22,6 +23,7 @@
     .item .name{font-weight:700}
     .links a{margin-left:8px}
     .empty{color:#64748b}
+    .error{color:#b91c1c}
   </style>
 </head>
 <body>
@@ -35,43 +37,59 @@
         <div class="row">
           <label style="display:block">
             ФИО
-            <input id="fio" placeholder="Иванов Иван Иванович" />
+            <input id="fio" placeholder="Иванов Иван Иванович" autocomplete="name" />
           </label>
-          <button id="btn">Найти</button>
+          <button id="btn" type="button">Найти</button>
         </div>
         <p class="hint">Подсказка: можно вводить только фамилию или фамилию+имя. Буквы «ё/е» учитываются автоматически.</p>
-        <div id="out" class="result">
-          Введите ФИО и нажмите «Найти».
-        </div>
+        <div id="out" class="result">Введите ФИО и нажмите «Найти».</div>
       </section>
     </div>
   </div>
 
   <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBLBsUP7zWZbNPSkPXNDKo0cBi30r6zZOIDcLBOHsalQQEJvErbz93OAljP6gIhFTycA/exec   
-"; // <=  сюда URL 
+    // ВАЖНО: без пробелов и переносов строк!
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBLBsUP7zWZbNPSkPXNDKo0cBi30r6zZOIDcLBOHsalQQEJvErbz93OAljP6gIhFTycA/exec";
+
+    // Нормализация: нижний регистр, ё->е, сжатие пробелов
     function norm(s){
       return (s||"").toLowerCase().replace(/ё/g,"е").replace(/\s+/g," ").trim();
     }
 
     async function search(){
-      const fio = document.getElementById("fio").value;
+      const fioInput = document.getElementById("fio");
+      const btn = document.getElementById("btn");
       const out = document.getElementById("out");
-      const q = norm(fio);
-      if(!q){ out.innerHTML = "Введите ФИО."; return; }
 
+      const fio = fioInput.value;
+      const q = norm(fio);
+      if(!q){
+        out.innerHTML = '<span class="empty">Введите ФИО.</span>';
+        fioInput.focus();
+        return;
+      }
+
+      // UI: блокируем кнопку на время запроса
+      btn.disabled = true;
       out.innerHTML = "Ищем…";
+
       try{
-        const res = await fetch(WEB_APP_URL + "?q=" + encodeURIComponent(fio));
-        if(!res.ok){ throw new Error("HTTP " + res.status); }
+        const url = WEB_APP_URL + "?q=" + encodeURIComponent(fio);
+        const res = await fetch(url, { method: "GET", redirect: "follow" });
+
+        if(!res.ok){
+          throw new Error("HTTP " + res.status);
+        }
+
         const data = await res.json();
 
         if(data.error){
-          out.innerHTML = "Ошибка: " + (data.message || data.error);
+          out.innerHTML = `<span class="error">Ошибка: ${data.message || data.error}</span>`;
           return;
         }
+
         if(!data.items || data.items.length === 0){
-          out.innerHTML = `<div class="empty">Ничего не найдено. Попробуйте ввести только фамилию или проверьте, как именно записано ФИО в названии файла.</div>`;
+          out.innerHTML = `<div class="empty">Ничего не найдено. Попробуйте ввести только фамилию или проверьте, как записано ФИО в названии файла.</div>`;
           return;
         }
 
@@ -88,13 +106,23 @@
           </div>
         `).join("");
       }catch(err){
-        out.innerHTML = "Произошла ошибка при запросе. Проверьте доступ к веб-приложению (Anyone) и что папка расшарена «у кого есть ссылка».";
         console.error(err);
+        out.innerHTML = `<span class="error">Произошла ошибка при запросе. 
+        Проверьте, что веб-приложение Apps Script задеплоено с доступом <b>Anyone</b>, 
+        и что у папки Диска доступ «у кого есть ссылка».</span>`;
+      }finally{
+        btn.disabled = false;
       }
     }
 
+    // Клики и Enter
     document.getElementById("btn").addEventListener("click", search);
-    document.getElementById("fio").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); search(); }});
+    document.getElementById("fio").addEventListener("keydown", (e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); search(); }
+    });
+
+    // Фокус в поле при загрузке
+    window.addEventListener("DOMContentLoaded", ()=> document.getElementById("fio").focus());
   </script>
 </body>
 </html>
