@@ -38,7 +38,7 @@
     <div class="app">
       <header>
         <h1>Поиск платёжки по ФИО</h1>
-        <p class="lead">Введите ФИО или часть (например, «абакарова 6419»). Буквы «ё/е» учитываются автоматически.</p>
+        <p class="lead">Введите полное или частичное ФИО (например, «Иванов Иван», «Иванов И И», можно добавить номер: «Иванов 6419»). Буквы «ё/е» учитываются автоматически.</p>
       </header>
 
       <div class="grid">
@@ -46,11 +46,11 @@
           <div class="row">
             <label style="display:block">
               ФИО / номер
-              <input id="q" placeholder="Абакарова Камила 6419" autocomplete="off" />
+              <input id="q" placeholder="Иванов Иван Иванович" autocomplete="off" />
             </label>
             <button id="btn" type="button">Найти</button>
           </div>
-          <div class="hint">Поиск по имени файла в указанной папке Google Диска. Клик «Показать» — откроет PDF справа.</div>
+          <div class="hint">Поиск идёт по имени файла в указанной папке Google Диска. Клик «Показать» откроет PDF справа на странице.</div>
           <div id="out" class="list" style="margin-top:10px;">Введите запрос и нажмите «Найти».</div>
         </section>
 
@@ -65,25 +65,25 @@
   </div>
 
   <script>
-    // ВСТАВЬ СВОЙ URL ВЕБ-ПРИЛОЖЕНИЯ (точно без переносов и пробелов)
+    // ВСТАВЬ свой /exec здесь (оставляю твой, который ты прислала):
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNgNp1fSs3dCLdk6pU2Bf-T_FcPKZLiZ1siL4qzrTqXkN48gT_XGDyjXGaMO2WnodK/exec";
 
     function norm(s){
       return (s||"").toLowerCase()
         .replace(/ё/g,"е")
-        .replace(/[#_.,;:()\\[\\]\\-]+/g," ")
-        .replace(/\\s+/g," ")
+        .replace(/[#_.,;:()\[\]\-]+/g," ")
+        .replace(/\s+/g," ")
         .trim();
     }
 
     function setPdf(src, name){
       const frame = document.getElementById("pdfFrame");
-      frame.src = src + "#view=FitH"; // открывать по ширине
+      frame.src = src + "#view=FitH";
       const actions = document.getElementById("actions");
       actions.innerHTML = name
-        ? \`<span class="badge">Просмотр: \${name}</span>\`
-          + \` · <a href="\${src}" target="_blank" rel="noopener">Открыть в новой вкладке</a>\`
-          + \` · <a href="\${src}" download>Скачать PDF</a>\`
+        ? `<span class="badge">Просмотр: ${name}</span>`
+          + ` · <a href="${src}" target="_blank" rel="noopener">Открыть в новой вкладке</a>`
+          + ` · <a href="${src}" download>Скачать PDF</a>`
         : "";
     }
 
@@ -104,39 +104,40 @@
         const raw = await res.text();
         let data = null; try { data = JSON.parse(raw) } catch(e){}
         if(!res.ok){
-          out.innerHTML = \`<div class="error">Ошибка: HTTP \${res.status}<br><pre>\${raw.slice(0,200)}</pre></div>\`;
+          out.innerHTML = `<div class="error">Ошибка: HTTP ${res.status}<br><pre>${raw.slice(0,300)}</pre></div>`;
           return;
         }
         if(!data || typeof data!=="object"){
-          out.innerHTML = \`<div class="error">Ответ не JSON<br><pre>\${raw.slice(0,200)}</pre></div>\`;
+          out.innerHTML = `<div class="error">Ответ не JSON<br><pre>${raw.slice(0,300)}</pre></div>`;
           return;
         }
         if(data.error){
-          out.innerHTML = \`<div class="error">Ошибка: \${data.message || data.error}</div>\`;
+          out.innerHTML = `<div class="error">Ошибка: ${data.message || data.error}</div>`;
           return;
         }
         if(!data.items || data.items.length===0){
-          out.innerHTML = '<div class="empty">Ничего не найдено. Попробуйте фамилию+имя или фамилию+номер.</div>';
+          out.innerHTML = '<div class="empty">Ничего не найдено. Попробуйте фамилию+имя, или фамилию+номер.</div>';
           return;
         }
 
-        out.innerHTML = data.items.map((it, idx) => \`
-          <div class="item" data-idx="\${idx}">
+        // Список результатов
+        out.innerHTML = data.items.map((it, idx) => `
+          <div class="item" data-idx="${idx}">
             <div>
-              <div class="name">\${it.name}</div>
-              <div class="hint">\${new Date(it.modifiedTime).toLocaleString('ru-RU')} • \${it.mimeType}</div>
+              <div class="name">${it.name}</div>
+              <div class="hint">${new Date(it.modifiedTime).toLocaleString('ru-RU')} • ${it.mimeType}</div>
             </div>
             <div class="links">
-              <a href="#" data-action="show" data-idx="\${idx}">Показать</a>
-              <a href="\${it.pdfLink}" target="_blank" rel="noopener">Открыть</a>
-              <a href="\${it.downloadLink}" target="_blank" rel="noopener">Скачать PDF</a>
+              <a href="#" data-action="show" data-idx="${idx}">Показать</a>
+              <a href="${it.pdfLink}" target="_blank" rel="noopener">Открыть</a>
+              <a href="${it.downloadLink}" target="_blank" rel="noopener">Скачать PDF</a>
             </div>
-          </div>\`).join("");
+          </div>`).join("");
 
-        // Автопоказ первого
+        // Автопоказ первого PDF справа
         setPdf(data.items[0].pdfLink, data.items[0].name);
 
-        // «Показать» в iframe
+        // Кнопка «Показать» → открываем в iframe
         out.onclick = (e)=>{
           const a = e.target.closest('a[data-action="show"]'); if(!a) return;
           e.preventDefault();
@@ -145,7 +146,7 @@
           setPdf(it.pdfLink, it.name);
         };
       }catch(err){
-        out.innerHTML = \`<div class="error">Сетевая ошибка: \${String(err)}</div>\`;
+        out.innerHTML = `<div class="error">Сетевая ошибка: ${String(err)}</div>`;
       }finally{
         btn.disabled = false;
       }
