@@ -28,7 +28,23 @@
     .empty{color:#64748b;padding:8px}
     .error{color:#b91c1c;padding:8px}
     footer{padding:24px;text-align:center}
-    footer img{max-width:160px;width:100%;height:auto;opacity:0.9}
+    /* МЕМОДЗИ АНИМАЦИЯ */
+    .memoji{
+      position: fixed; right: 16px; bottom: -220px;
+      width: 180px; height: auto; pointer-events: none; opacity: 0;
+    }
+    .memoji.show{
+      animation: popIn 1.2s ease-out forwards, fadeAway 0.6s ease-in 2.2s forwards;
+    }
+    @keyframes popIn{
+      0% { transform: translateY(120px) scale(0.8) rotate(-6deg); opacity: 0; }
+      60%{ transform: translateY(-4px)  scale(1.04) rotate(2deg);  opacity: 1; }
+      100%{transform: translateY(0)     scale(1)    rotate(0deg);  opacity: 1; }
+    }
+    @keyframes fadeAway{
+      to { opacity: 0; transform: translateY(20px) scale(0.98); }
+    }
+    @media (max-width: 560px){ .row{grid-template-columns:1fr} .memoji{width:140px} }
   </style>
 </head>
 <body>
@@ -36,7 +52,7 @@
     <div class="app">
       <header>
         <h1>Поиск платёжки по ФИО</h1>
-        <p class="lead">Введите полное или частичное ФИО. Буквы «ё/е» учитываются автоматически.</p>
+        <p class="lead">Введите полное ФИО. Буквы «ё/е» учитываются автоматически.</p>
       </header>
 
       <section class="panel">
@@ -47,18 +63,16 @@
           </label>
           <button id="btn" type="button">Найти</button>
         </div>
-        <div id="out" class="list">Введите запрос и нажмите «Найти».</div>
+        <div id="out" class="list">Введите полное ФИО и нажмите «Найти».</div>
       </section>
     </div>
   </div>
 
-  <!-- Большой логотип внизу -->
-  <footer>
-    <!-- Положи файл memoji-girl.png в корень репозитория -->
-    <img src="./memoji-girl.png" alt="Логотип" />
-  </footer>
+  <!-- Мемодзи: покажем анимацию при успешном поиске -->
+  <img id="memoji" class="memoji" src="./memoji-girl.png" alt="memoji" />
 
   <script>
+    // ВСТАВЬТЕ СВОЙ /exec URL (одной строкой):
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNgNp1fSs3dCLdk6pU2Bf-T_FcPKZLiZ1siL4qzrTqXkN48gT_XGDyjXGaMO2WnodK/exec";
 
     function norm(s){
@@ -69,6 +83,7 @@
         .trim();
     }
 
+    // JSONP (таймаут 60с + анти-кэш)
     function jsonp(url){
       return new Promise((resolve, reject)=>{
         const cb = "cb_" + Math.random().toString(36).slice(2);
@@ -83,13 +98,30 @@
       });
     }
 
+    function showMemoji(){
+      const el = document.getElementById("memoji");
+      el.classList.remove("show");
+      // перезапуск анимации
+      void el.offsetWidth;
+      el.classList.add("show");
+      // автоматически скрыть класс после 3 сек (чтобы можно было повторно показать)
+      setTimeout(()=> el.classList.remove("show"), 3000);
+    }
+
     async function search(){
       const input = document.getElementById("q");
       const out = document.getElementById("out");
       const btn = document.getElementById("btn");
 
       const q = norm(input.value);
-      if(!q){ out.innerHTML = '<div class="empty">Введите ФИО.</div>'; input.focus(); return; }
+      const words = q.split(" ").filter(Boolean);
+
+      // Локальная валидация: минимум 3 слова
+      if(words.length < 3){
+        out.innerHTML = '<div class="empty">Введите полное ФИО: фамилия, имя и отчество.</div>';
+        input.focus();
+        return;
+      }
 
       btn.disabled = true;
       out.textContent = "Ищем…";
@@ -99,15 +131,19 @@
         const data = await jsonp(url);
 
         if(data.error){
-          out.innerHTML = `<div class="error">Ошибка: ${data.message || data.error}</div>`;
+          if(data.error === "need_full_name"){
+            out.innerHTML = '<div class="empty">Введите полное ФИО: фамилия, имя и отчество.</div>';
+          } else {
+            out.innerHTML = `<div class="error">Ошибка: ${data.message || data.error}</div>`;
+          }
           return;
         }
         if(!data.items || data.items.length===0){
-          out.innerHTML = '<div class="empty">Ничего не найдено. Проверьте написание ФИО.</div>';
+          out.innerHTML = '<div class="empty">Ничего не найдено. Проверьте написание ФИО полностью.</div>';
           return;
         }
 
-        // только кнопка «Скачать»
+        // Рендерим список только с кнопкой «Скачать»
         out.innerHTML = data.items.map((it) => `
           <div class="item">
             <div>
@@ -117,6 +153,9 @@
             <a class="dl" href="${it.downloadLink}" target="_blank" rel="noopener">Скачать</a>
           </div>
         `).join("");
+
+        // Успешно нашли — показываем анимацию мемодзи
+        showMemoji();
 
       }catch(err){
         out.innerHTML = `<div class="error">Сетевая ошибка: ${String(err)}</div>`;
