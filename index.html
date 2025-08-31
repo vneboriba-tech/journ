@@ -50,7 +50,7 @@
             </label>
             <button id="btn" type="button">Найти</button>
           </div>
-          <div class="hint">Поиск идёт по имени файла в указанной папке Google Диска. Клик «Показать» откроет PDF справа на странице.</div>
+          <div class="hint">Поиск по имени файла в указанной папке Google Диска. Клик «Показать» — откроет PDF справа.</div>
           <div id="out" class="list" style="margin-top:10px;">Введите запрос и нажмите «Найти».</div>
         </section>
 
@@ -65,7 +65,7 @@
   </div>
 
   <script>
-    // ВСТАВЬ свой /exec здесь (оставляю твой, который ты прислала):
+    // ВСТАВЬТЕ СВОЙ /exec URL НИЖЕ (ОДНОЙ СТРОКОЙ, БЕЗ ЛИШНИХ ПРОБЕЛОВ):
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNgNp1fSs3dCLdk6pU2Bf-T_FcPKZLiZ1siL4qzrTqXkN48gT_XGDyjXGaMO2WnodK/exec";
 
     function norm(s){
@@ -87,6 +87,36 @@
         : "";
     }
 
+    // JSONP-помощник (обходит CORS)
+    function jsonp(url){
+      return new Promise((resolve, reject)=>{
+        const cb = "cb_" + Math.random().toString(36).slice(2);
+        const s = document.createElement("script");
+        const timeout = setTimeout(()=>{
+          cleanup();
+          reject(new Error("JSONP timeout"));
+        }, 15000);
+
+        function cleanup(){
+          clearTimeout(timeout);
+          delete window[cb];
+          if (s.parentNode) s.parentNode.removeChild(s);
+        }
+
+        window[cb] = function(data){
+          cleanup();
+          resolve(data);
+        };
+        s.onerror = function(){
+          cleanup();
+          reject(new Error("JSONP network error"));
+        };
+
+        s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+        document.head.appendChild(s);
+      });
+    }
+
     async function search(){
       const input = document.getElementById("q");
       const out = document.getElementById("out");
@@ -100,17 +130,8 @@
 
       try{
         const url = WEB_APP_URL + "?action=search&q=" + encodeURIComponent(input.value);
-        const res = await fetch(url, { method:"GET", redirect:"follow" });
-        const raw = await res.text();
-        let data = null; try { data = JSON.parse(raw) } catch(e){}
-        if(!res.ok){
-          out.innerHTML = `<div class="error">Ошибка: HTTP ${res.status}<br><pre>${raw.slice(0,300)}</pre></div>`;
-          return;
-        }
-        if(!data || typeof data!=="object"){
-          out.innerHTML = `<div class="error">Ответ не JSON<br><pre>${raw.slice(0,300)}</pre></div>`;
-          return;
-        }
+        const data = await jsonp(url);
+
         if(data.error){
           out.innerHTML = `<div class="error">Ошибка: ${data.message || data.error}</div>`;
           return;
@@ -120,7 +141,6 @@
           return;
         }
 
-        // Список результатов
         out.innerHTML = data.items.map((it, idx) => `
           <div class="item" data-idx="${idx}">
             <div>
@@ -137,7 +157,7 @@
         // Автопоказ первого PDF справа
         setPdf(data.items[0].pdfLink, data.items[0].name);
 
-        // Кнопка «Показать» → открываем в iframe
+        // Кнопка «Показать» → открыть в iframe
         out.onclick = (e)=>{
           const a = e.target.closest('a[data-action="show"]'); if(!a) return;
           e.preventDefault();
