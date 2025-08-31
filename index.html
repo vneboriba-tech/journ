@@ -3,203 +3,157 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Поиск платёжки по ФИО</title>
+  <title>Платёжки — поиск по ФИО</title>
   <style>
-    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Inter,Arial;background:#0f172a;color:#0b1223}
-    .wrap{min-height:100dvh;display:grid;place-items:start center;padding:32px}
-    .app{width:min(860px,100%);display:grid;gap:16px}
-    header,section{background:#fff;border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    h1{margin:0 0 6px;font-size:26px}
-    .lead{margin:0;color:#64748b}
+    :root{--bg:#0f172a;--card:#fff;--muted:#64748b;--primary:#2563eb}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:#0b1223}
+    .wrap{min-height:100dvh;display:grid;place-items:start center;padding:24px}
+    .app{width:min(1200px,100%);display:grid;gap:16px}
+    header{background:var(--card);border-radius:16px;padding:16px 20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{margin:0 0 6px;font-size:24px}
+    .lead{margin:0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:420px 1fr;gap:16px}
+    .panel{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     label{font-weight:600}
     input{width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px}
-    input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px #93c5fd}
-    button{cursor:pointer;border:none;border-radius:10px;padding:12px 16px;background:#2563eb;color:#fff;font-weight:700}
+    input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px #93c5fd}
+    button{cursor:pointer;border:none;border-radius:10px;padding:12px 16px;background:var(--primary);color:#fff;font-weight:700}
     button[disabled]{opacity:.6;cursor:progress}
-    .row{display:grid;grid-template-columns:1fr auto;gap:12px}
-    .hint{color:#64748b;font-size:12px}
-    .result{border:1px dashed #cbd5e1;border-radius:10px;padding:12px;background:#f8fafc}
-    .item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin:8px 0}
+    .row{display:grid;grid-template-columns:1fr auto;gap:10px}
+    .hint{color:var(--muted);font-size:12px;margin-top:6px}
+    .list{max-height:65vh;overflow:auto;border:1px dashed #cbd5e1;border-radius:10px;padding:8px;background:#f8fafc}
+    .item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin:8px 6px}
     .item .name{font-weight:700}
     .links a{margin-left:8px}
-    .empty{color:#64748b}
-    .error{color:#b91c1c}
+    .empty{color:var(--muted);padding:8px}
+    .error{color:#b91c1c;padding:8px}
+    .viewer{height:70vh;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden}
+    .viewer iframe{width:100%;height:100%;border:0;background:#fff}
+    .badge{font-size:11px;color:#475569}
+    @media (max-width: 900px){ .grid{grid-template-columns:1fr} .viewer{height:60vh} }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="app">
       <header>
-        <h1>Найти платёжку по ФИО</h1>
-        <p class="lead">Введи ФИО обучающегося — получишь ссылку на платёжку из Google Диска.</p>
+        <h1>Поиск платёжки по ФИО</h1>
+        <p class="lead">Введите ФИО или часть (например, «абакарова 6419»). Буквы «ё/е» учитываются автоматически.</p>
       </header>
-      <section>
-        <div class="row">
-          <label style="display:block">
-            ФИО
-            <input id="fio" placeholder="Иванов Иван Иванович" autocomplete="name" />
-          </label>
-          <button id="btn" type="button">Найти</button>
-        </div>
-        <p class="hint">Подсказка: можно вводить только фамилию или фамилию+имя. Буквы «ё/е» учитываются автоматически.</p>
-        <div id="out" class="result">Введите ФИО и нажмите «Найти».</div>
-      </section>
+
+      <div class="grid">
+        <section class="panel">
+          <div class="row">
+            <label style="display:block">
+              ФИО / номер
+              <input id="q" placeholder="Абакарова Камила 6419" autocomplete="off" />
+            </label>
+            <button id="btn" type="button">Найти</button>
+          </div>
+          <div class="hint">Поиск по имени файла в указанной папке Google Диска. Клик «Показать» — откроет PDF справа.</div>
+          <div id="out" class="list" style="margin-top:10px;">Введите запрос и нажмите «Найти».</div>
+        </section>
+
+        <section class="panel">
+          <div class="viewer" id="viewer">
+            <iframe id="pdfFrame" title="Просмотр PDF"></iframe>
+          </div>
+          <div id="actions" class="hint" style="margin-top:10px;"></div>
+        </section>
+      </div>
     </div>
   </div>
 
   <script>
-    // ВАЖНО: без пробелов и переносов строк!
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzBLBsUP7zWZbNPSkPXNDKo0cBi30r6zZOIDcLBOHsalQQEJvErbz93OAljP6gIhFTycA/exec";
+    // ВСТАВЬ СВОЙ URL ВЕБ-ПРИЛОЖЕНИЯ (точно без переносов и пробелов)
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNgNp1fSs3dCLdk6pU2Bf-T_FcPKZLiZ1siL4qzrTqXkN48gT_XGDyjXGaMO2WnodK/exec"; // https://script.google.com/macros/s/.../exec
 
-    // Нормализация: нижний регистр, ё->е, сжатие пробелов
     function norm(s){
-      return (s||"").toLowerCase().replace(/ё/g,"е").replace(/\s+/g," ").trim();
+      return (s||"").toLowerCase()
+        .replace(/ё/g,"е")
+        .replace(/[#_.,;:()\\[\\]\\-]+/g," ")
+        .replace(/\\s+/g," ")
+        .trim();
+    }
+
+    function setPdf(src, name){
+      const frame = document.getElementById("pdfFrame");
+      frame.src = src + "#view=FitH"; // открывать по ширине
+      const actions = document.getElementById("actions");
+      actions.innerHTML = name
+        ? \`<span class="badge">Просмотр: \${name}</span>\`
+          + \` · <a href="\${src}" target="_blank" rel="noopener">Открыть в новой вкладке</a>\`
+          + \` · <a href="\${src}" download>Скачать PDF</a>\`
+        : "";
     }
 
     async function search(){
-      const fioInput = document.getElementById("fio");
-      const btn = document.getElementById("btn");
+      const input = document.getElementById("q");
       const out = document.getElementById("out");
+      const btn = document.getElementById("btn");
 
-      const fio = fioInput.value;
-      const q = norm(fio);
-      if(!q){
-        out.innerHTML = '<span class="empty">Введите ФИО.</span>';
-        fioInput.focus();
-        return;
-      }
+      const q = norm(input.value);
+      if(!q){ out.innerHTML = '<div class="empty">Введите ФИО или номер.</div>'; input.focus(); return; }
 
-      // UI: блокируем кнопку на время запроса
       btn.disabled = true;
-      out.innerHTML = "Ищем…";
+      out.textContent = "Ищем…";
 
       try{
-        const url = WEB_APP_URL + "?q=" + encodeURIComponent(fio);
-        const res = await fetch(url, { method: "GET", redirect: "follow" });
-
+        const url = WEB_APP_URL + "?action=search&q=" + encodeURIComponent(input.value);
+        const res = await fetch(url, { method:"GET", redirect:"follow" });
+        const raw = await res.text();
+        let data = null; try { data = JSON.parse(raw) } catch(e){}
         if(!res.ok){
-          throw new Error("HTTP " + res.status);
+          out.innerHTML = \`<div class="error">Ошибка: HTTP \${res.status}<br><pre>\${raw.slice(0,200)}</pre></div>\`;
+          return;
         }
-
-        const data = await res.json();
-
+        if(!data || typeof data!=="object"){
+          out.innerHTML = \`<div class="error">Ответ не JSON<br><pre>\${raw.slice(0,200)}</pre></div>\`;
+          return;
+        }
         if(data.error){
-          out.innerHTML = `<span class="error">Ошибка: ${data.message || data.error}</span>`;
+          out.innerHTML = \`<div class="error">Ошибка: \${data.message || data.error}</div>\`;
+          return;
+        }
+        if(!data.items || data.items.length===0){
+          out.innerHTML = '<div class="empty">Ничего не найдено. Попробуйте фамилию+имя или фамилию+номер.</div>';
           return;
         }
 
-        if(!data.items || data.items.length === 0){
-          out.innerHTML = `<div class="empty">Ничего не найдено. Попробуйте ввести только фамилию или проверьте, как записано ФИО в названии файла.</div>`;
-          return;
-        }
-
-        out.innerHTML = data.items.map(item => `
-          <div class="item">
+        out.innerHTML = data.items.map((it, idx) => \`
+          <div class="item" data-idx="\${idx}">
             <div>
-              <div class="name">${item.name}</div>
-              <div class="hint">${new Date(item.modifiedTime).toLocaleString('ru-RU')} • ${item.mimeType}</div>
+              <div class="name">\${it.name}</div>
+              <div class="hint">\${new Date(it.modifiedTime).toLocaleString('ru-RU')} • \${it.mimeType}</div>
             </div>
             <div class="links">
-              <a href="${item.webViewLink}" target="_blank" rel="noopener">Открыть</a>
-              <a href="${item.downloadLink}" target="_blank" rel="noopener">Скачать PDF</a>
+              <a href="#" data-action="show" data-idx="\${idx}">Показать</a>
+              <a href="\${it.pdfLink}" target="_blank" rel="noopener">Открыть</a>
+              <a href="\${it.downloadLink}" target="_blank" rel="noopener">Скачать PDF</a>
             </div>
-          </div>
-        `).join("");
+          </div>\`).join("");
+
+        // Автопоказ первого
+        setPdf(data.items[0].pdfLink, data.items[0].name);
+
+        // «Показать» в iframe
+        out.onclick = (e)=>{
+          const a = e.target.closest('a[data-action="show"]'); if(!a) return;
+          e.preventDefault();
+          const idx = +a.getAttribute("data-idx");
+          const it = data.items[idx];
+          setPdf(it.pdfLink, it.name);
+        };
       }catch(err){
-        console.error(err);
-        out.innerHTML = `<span class="error">Произошла ошибка при запросе. 
-        Проверьте, что веб-приложение Apps Script задеплоено с доступом <b>Anyone</b>, 
-        и что у папки Диска доступ «у кого есть ссылка».</span>`;
+        out.innerHTML = \`<div class="error">Сетевая ошибка: \${String(err)}</div>\`;
       }finally{
         btn.disabled = false;
       }
     }
 
-    // Клики и Enter
     document.getElementById("btn").addEventListener("click", search);
-    document.getElementById("fio").addEventListener("keydown", (e)=>{
-      if(e.key==="Enter"){ e.preventDefault(); search(); }
-    });
-
-    // Фокус в поле при загрузке
-    window.addEventListener("DOMContentLoaded", ()=> document.getElementById("fio").focus());
+    document.getElementById("q").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); search(); }});
+    window.addEventListener("DOMContentLoaded", ()=> document.getElementById("q").focus());
   </script>
 </body>
 </html>
-
-
-<script>
-  const WEB_APP_URL = "PASTE_YOUR_EXEC_URL_HERE"; // без пробелов и переносов!
-
-  function norm(s){
-    return (s||"").toLowerCase().replace(/ё/g,"е").replace(/\s+/g," ").trim();
-  }
-
-  async function search(){
-    const fioInput = document.getElementById("fio");
-    const btn = document.getElementById("btn");
-    const out = document.getElementById("out");
-
-    const fio = fioInput.value;
-    const q = norm(fio);
-    if(!q){ out.innerHTML = '<span class="empty">Введите ФИО.</span>'; fioInput.focus(); return; }
-
-    btn.disabled = true;
-    out.textContent = "Ищем…";
-
-    try{
-      const url = WEB_APP_URL + "?q=" + encodeURIComponent(fio);
-      const res = await fetch(url, { method: "GET", redirect: "follow" });
-
-      // прочитаем «сырое» тело для диагностики
-      const raw = await res.text();
-      let data = null;
-      try { data = JSON.parse(raw); } catch (e) {}
-
-      if(!res.ok){
-        out.innerHTML = `<div class="error">Ошибка запроса: HTTP ${res.status}<br><pre style="white-space:pre-wrap">${raw.slice(0,200)}</pre></div>`;
-        console.error("HTTP not OK", res.status, raw);
-        return;
-      }
-
-      if(!data || typeof data !== "object"){
-        out.innerHTML = `<div class="error">Ответ не JSON. Первые символы:<br><pre style="white-space:pre-wrap">${raw.slice(0,200)}</pre></div>`;
-        console.error("Not JSON", raw);
-        return;
-      }
-
-      if(data.error){
-        out.innerHTML = `<span class="error">Ошибка (сервер): ${data.message || data.error}</span>`;
-        return;
-      }
-
-      if(!data.items || data.items.length === 0){
-        out.innerHTML = `<div class="empty">Ничего не найдено. Попробуйте ввести только фамилию или проверьте, как записано ФИО в названии файла.</div>`;
-        return;
-      }
-
-      out.innerHTML = data.items.map(item => `
-        <div class="item">
-          <div>
-            <div class="name">${item.name}</div>
-            <div class="hint">${new Date(item.modifiedTime).toLocaleString('ru-RU')} • ${item.mimeType}</div>
-          </div>
-          <div class="links">
-            <a href="${item.webViewLink}" target="_blank" rel="noopener">Открыть</a>
-            <a href="${item.downloadLink}" target="_blank" rel="noopener">Скачать PDF</a>
-          </div>
-        </div>
-      `).join("");
-    }catch(err){
-      out.innerHTML = `<span class="error">Сетевая ошибка: ${String(err)}</span>`;
-      console.error(err);
-    }finally{
-      btn.disabled = false;
-    }
-  }
-
-  document.getElementById("btn").addEventListener("click", search);
-  document.getElementById("fio").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); search(); }});
-  window.addEventListener("DOMContentLoaded", ()=> document.getElementById("fio").focus());
-</script>
-
