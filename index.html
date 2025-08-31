@@ -65,7 +65,7 @@
   </div>
 
   <script>
-    // ВСТАВЬТЕ СВОЙ /exec URL НИЖЕ (ОДНОЙ СТРОКОЙ, БЕЗ ЛИШНИХ ПРОБЕЛОВ):
+    // ВСТАВЬТЕ СВОЙ /exec URL НИЖЕ (одной строкой, без пробелов!):
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNgNp1fSs3dCLdk6pU2Bf-T_FcPKZLiZ1siL4qzrTqXkN48gT_XGDyjXGaMO2WnodK/exec";
 
     function norm(s){
@@ -87,15 +87,16 @@
         : "";
     }
 
-    // JSONP-помощник (обходит CORS)
+    // JSONP-помощник (увеличен таймаут и анти-кэш)
     function jsonp(url){
       return new Promise((resolve, reject)=>{
         const cb = "cb_" + Math.random().toString(36).slice(2);
         const s = document.createElement("script");
+        // Таймаут 60 сек
         const timeout = setTimeout(()=>{
           cleanup();
           reject(new Error("JSONP timeout"));
-        }, 15000);
+        }, 60000);
 
         function cleanup(){
           clearTimeout(timeout);
@@ -112,7 +113,9 @@
           reject(new Error("JSONP network error"));
         };
 
-        s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+        // анти-кэш: ts
+        const sep = url.includes("?") ? "&" : "?";
+        s.src = url + sep + "callback=" + cb + "&ts=" + Date.now();
         document.head.appendChild(s);
       });
     }
