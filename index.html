@@ -8,11 +8,11 @@
     :root{--bg:#0f172a;--card:#fff;--muted:#64748b;--primary:#2563eb}
     body{margin:0;font-family:system-ui,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:#0b1223}
     .wrap{min-height:100dvh;display:grid;place-items:start center;padding:24px}
-    .app{width:min(1200px,100%);display:grid;gap:16px}
-    header{background:var(--card);border-radius:16px;padding:16px 20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    h1{margin:0 0 6px;font-size:24px}
-    .lead{margin:0;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:420px 1fr;gap:16px}
+    .app{width:min(900px,100%);display:grid;gap:16px}
+    header{position:relative;background:var(--card);border-radius:16px;padding:16px 20px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px}
+    h1{margin:0;font-size:24px;line-height:1.2}
+    .lead{margin:2px 0 0;color:var(--muted);font-size:14px}
+    .logo{position:absolute;right:16px;top:50%;transform:translateY(-50%);height:44px;width:auto;border-radius:10px;object-fit:contain}
     .panel{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     label{font-weight:600}
     input{width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px}
@@ -20,100 +20,64 @@
     button{cursor:pointer;border:none;border-radius:10px;padding:12px 16px;background:var(--primary);color:#fff;font-weight:700}
     button[disabled]{opacity:.6;cursor:progress}
     .row{display:grid;grid-template-columns:1fr auto;gap:10px}
-    .hint{color:var(--muted);font-size:12px;margin-top:6px}
-    .list{max-height:65vh;overflow:auto;border:1px dashed #cbd5e1;border-radius:10px;padding:8px;background:#f8fafc}
+    .list{margin-top:12px;max-height:65vh;overflow:auto;border:1px dashed #cbd5e1;border-radius:10px;padding:8px;background:#f8fafc}
     .item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin:8px 6px}
-    .item .name{font-weight:700}
-    .links a{margin-left:8px}
-    .empty{color:var(--muted);padding:8px}
+    .name{font-weight:700}
+    .meta{color:#64748b;font-size:12px}
+    .dl{display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:#eef2ff;border:1px solid #c7d2fe;padding:8px 12px;border-radius:10px;font-weight:700}
+    .dl:hover{background:#e0e7ff}
+    .dl img{height:18px;width:18px;object-fit:contain}
+    .empty{color:#64748b;padding:8px}
     .error{color:#b91c1c;padding:8px}
-    .viewer{height:70vh;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden}
-    .viewer iframe{width:100%;height:100%;border:0;background:#fff}
-    .badge{font-size:11px;color:#475569}
-    @media (max-width: 900px){ .grid{grid-template-columns:1fr} .viewer{height:60vh} }
+    @media (max-width: 560px){ .row{grid-template-columns:1fr} .logo{display:none} }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="app">
       <header>
-        <h1>Поиск платёжки по ФИО</h1>
-        <p class="lead">Введите полное или частичное ФИО (например, «Иванов Иван», «Иванов И И», можно добавить номер: «Иванов 6419»). Буквы «ё/е» учитываются автоматически.</p>
+        <div>
+          <h1>Поиск платёжки по ФИО</h1>
+          <p class="lead">Введите полное или частичное ФИО. Буквы «ё/е» учитываются автоматически.</p>
+        </div>
+        <!-- ЛОГО: положи файл "New Logo.jpg" в корень репозитория -->
+        <img class="logo" src="./New Logo.jpg" alt="Логотип" />
       </header>
 
-      <div class="grid">
-        <section class="panel">
-          <div class="row">
-            <label style="display:block">
-              ФИО / номер
-              <input id="q" placeholder="Иванов Иван Иванович" autocomplete="off" />
-            </label>
-            <button id="btn" type="button">Найти</button>
-          </div>
-          <div class="hint">Поиск по имени файла в указанной папке Google Диска. Клик «Показать» — откроет PDF справа.</div>
-          <div id="out" class="list" style="margin-top:10px;">Введите запрос и нажмите «Найти».</div>
-        </section>
-
-        <section class="panel">
-          <div class="viewer" id="viewer">
-            <iframe id="pdfFrame" title="Просмотр PDF"></iframe>
-          </div>
-          <div id="actions" class="hint" style="margin-top:10px;"></div>
-        </section>
-      </div>
+      <section class="panel">
+        <div class="row">
+          <label style="display:block">
+            ФИО
+            <input id="q" placeholder="Иванов Иван Иванович" autocomplete="off" />
+          </label>
+          <button id="btn" type="button">Найти</button>
+        </div>
+        <div id="out" class="list">Введите запрос и нажмите «Найти».</div>
+      </section>
     </div>
   </div>
 
   <script>
-    // ВСТАВЬТЕ СВОЙ /exec URL НИЖЕ (одной строкой, без пробелов!):
+    // ВСТАВЬ СВОЙ /exec URL НИЖЕ (ОДНОЙ СТРОКОЙ, БЕЗ ЛИШНИХ ПРОБЕЛОВ):
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNgNp1fSs3dCLdk6pU2Bf-T_FcPKZLiZ1siL4qzrTqXkN48gT_XGDyjXGaMO2WnodK/exec";
 
     function norm(s){
       return (s||"").toLowerCase()
         .replace(/ё/g,"е")
-        .replace(/[#_.,;:()\[\]\-]+/g," ")
-        .replace(/\s+/g," ")
+        .replace(/[#_.,;:()\\[\\]\\-]+/g," ")
+        .replace(/\\s+/g," ")
         .trim();
     }
 
-    function setPdf(src, name){
-      const frame = document.getElementById("pdfFrame");
-      frame.src = src + "#view=FitH";
-      const actions = document.getElementById("actions");
-      actions.innerHTML = name
-        ? `<span class="badge">Просмотр: ${name}</span>`
-          + ` · <a href="${src}" target="_blank" rel="noopener">Открыть в новой вкладке</a>`
-          + ` · <a href="${src}" download>Скачать PDF</a>`
-        : "";
-    }
-
-    // JSONP-помощник (увеличен таймаут и анти-кэш)
+    // JSONP-помощник (увеличен таймаут + анти-кэш)
     function jsonp(url){
       return new Promise((resolve, reject)=>{
         const cb = "cb_" + Math.random().toString(36).slice(2);
         const s = document.createElement("script");
-        // Таймаут 60 сек
-        const timeout = setTimeout(()=>{
-          cleanup();
-          reject(new Error("JSONP timeout"));
-        }, 60000);
-
-        function cleanup(){
-          clearTimeout(timeout);
-          delete window[cb];
-          if (s.parentNode) s.parentNode.removeChild(s);
-        }
-
-        window[cb] = function(data){
-          cleanup();
-          resolve(data);
-        };
-        s.onerror = function(){
-          cleanup();
-          reject(new Error("JSONP network error"));
-        };
-
-        // анти-кэш: ts
+        const timeout = setTimeout(()=>{ cleanup(); reject(new Error("JSONP timeout")); }, 60000);
+        function cleanup(){ clearTimeout(timeout); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
+        window[cb] = (data)=>{ cleanup(); resolve(data); };
+        s.onerror = ()=>{ cleanup(); reject(new Error("JSONP network error")); };
         const sep = url.includes("?") ? "&" : "?";
         s.src = url + sep + "callback=" + cb + "&ts=" + Date.now();
         document.head.appendChild(s);
@@ -126,7 +90,7 @@
       const btn = document.getElementById("btn");
 
       const q = norm(input.value);
-      if(!q){ out.innerHTML = '<div class="empty">Введите ФИО или номер.</div>'; input.focus(); return; }
+      if(!q){ out.innerHTML = '<div class="empty">Введите ФИО.</div>'; input.focus(); return; }
 
       btn.disabled = true;
       out.textContent = "Ищем…";
@@ -140,34 +104,25 @@
           return;
         }
         if(!data.items || data.items.length===0){
-          out.innerHTML = '<div class="empty">Ничего не найдено. Попробуйте фамилию+имя, или фамилию+номер.</div>';
+          out.innerHTML = '<div class="empty">Ничего не найдено. Проверьте написание ФИО.</div>';
           return;
         }
 
-        out.innerHTML = data.items.map((it, idx) => `
-          <div class="item" data-idx="${idx}">
+        // РЕНДЕР: только «Скачать»
+        out.innerHTML = data.items.map((it) => `
+          <div class="item">
             <div>
               <div class="name">${it.name}</div>
-              <div class="hint">${new Date(it.modifiedTime).toLocaleString('ru-RU')} • ${it.mimeType}</div>
+              <div class="meta">${new Date(it.modifiedTime).toLocaleString('ru-RU')} • ${it.mimeType}</div>
             </div>
-            <div class="links">
-              <a href="#" data-action="show" data-idx="${idx}">Показать</a>
-              <a href="${it.pdfLink}" target="_blank" rel="noopener">Открыть</a>
-              <a href="${it.downloadLink}" target="_blank" rel="noopener">Скачать PDF</a>
-            </div>
-          </div>`).join("");
+            <a class="dl" href="${it.downloadLink}" target="_blank" rel="noopener">
+              <!-- Маленький милый логотип у ссылки «Скачать»: положи memoji-girl.png в корень репо -->
+              <img src="./memoji-girl.png" alt="" />
+              Скачать
+            </a>
+          </div>
+        `).join("");
 
-        // Автопоказ первого PDF справа
-        setPdf(data.items[0].pdfLink, data.items[0].name);
-
-        // Кнопка «Показать» → открыть в iframe
-        out.onclick = (e)=>{
-          const a = e.target.closest('a[data-action="show"]'); if(!a) return;
-          e.preventDefault();
-          const idx = +a.getAttribute("data-idx");
-          const it = data.items[idx];
-          setPdf(it.pdfLink, it.name);
-        };
       }catch(err){
         out.innerHTML = `<div class="error">Сетевая ошибка: ${String(err)}</div>`;
       }finally{
