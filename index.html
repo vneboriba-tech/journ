@@ -126,3 +126,80 @@
   </script>
 </body>
 </html>
+
+
+<script>
+  const WEB_APP_URL = "PASTE_YOUR_EXEC_URL_HERE"; // без пробелов и переносов!
+
+  function norm(s){
+    return (s||"").toLowerCase().replace(/ё/g,"е").replace(/\s+/g," ").trim();
+  }
+
+  async function search(){
+    const fioInput = document.getElementById("fio");
+    const btn = document.getElementById("btn");
+    const out = document.getElementById("out");
+
+    const fio = fioInput.value;
+    const q = norm(fio);
+    if(!q){ out.innerHTML = '<span class="empty">Введите ФИО.</span>'; fioInput.focus(); return; }
+
+    btn.disabled = true;
+    out.textContent = "Ищем…";
+
+    try{
+      const url = WEB_APP_URL + "?q=" + encodeURIComponent(fio);
+      const res = await fetch(url, { method: "GET", redirect: "follow" });
+
+      // прочитаем «сырое» тело для диагностики
+      const raw = await res.text();
+      let data = null;
+      try { data = JSON.parse(raw); } catch (e) {}
+
+      if(!res.ok){
+        out.innerHTML = `<div class="error">Ошибка запроса: HTTP ${res.status}<br><pre style="white-space:pre-wrap">${raw.slice(0,200)}</pre></div>`;
+        console.error("HTTP not OK", res.status, raw);
+        return;
+      }
+
+      if(!data || typeof data !== "object"){
+        out.innerHTML = `<div class="error">Ответ не JSON. Первые символы:<br><pre style="white-space:pre-wrap">${raw.slice(0,200)}</pre></div>`;
+        console.error("Not JSON", raw);
+        return;
+      }
+
+      if(data.error){
+        out.innerHTML = `<span class="error">Ошибка (сервер): ${data.message || data.error}</span>`;
+        return;
+      }
+
+      if(!data.items || data.items.length === 0){
+        out.innerHTML = `<div class="empty">Ничего не найдено. Попробуйте ввести только фамилию или проверьте, как записано ФИО в названии файла.</div>`;
+        return;
+      }
+
+      out.innerHTML = data.items.map(item => `
+        <div class="item">
+          <div>
+            <div class="name">${item.name}</div>
+            <div class="hint">${new Date(item.modifiedTime).toLocaleString('ru-RU')} • ${item.mimeType}</div>
+          </div>
+          <div class="links">
+            <a href="${item.webViewLink}" target="_blank" rel="noopener">Открыть</a>
+            <a href="${item.downloadLink}" target="_blank" rel="noopener">Скачать PDF</a>
+          </div>
+        </div>
+      `).join("");
+    }catch(err){
+      out.innerHTML = `<span class="error">Сетевая ошибка: ${String(err)}</span>`;
+      console.error(err);
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById("btn").addEventListener("click", search);
+  document.getElementById("fio").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); search(); }});
+  window.addEventListener("DOMContentLoaded", ()=> document.getElementById("fio").focus());
+</script>
+
